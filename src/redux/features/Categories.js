@@ -1,65 +1,58 @@
-import { createSlice, createAsyncThunk, createSerializableStateInvariantMiddleware } from '@reduxjs/toolkit';
-import { AxiosCustom } from '../../common/AxiosInstance.js';
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { AxiosCustom } from "../../common/AxiosInstance.js";
 
 const initialState = {
   data: [],
   loading: false,
   error: null,
-  limit: 1000,
-  offset: 0,
+  limit: 10,
+  page: 0,
   count: 0,
-  search: ''
 };
-export const fetchDataCategories = createAsyncThunk('data/fetchDataCategories', async (_, { getState }) => {
-  try {
-    const { limit, offset } = getState().Categories;
-    const data = await AxiosCustom(`/categories?limit=${limit}&offset=${offset}`);
-    return data;
-  } catch (error) {
-    console.log(error.response.data.message);
-    const err = error.response.data.message;
-    if (err === 'jwt expired') {
-      window.location.reload('/login');
-      localStorage.clear('lybas-token');
+export const fetchCategories = createAsyncThunk(
+  "data/fetchCategories",
+  async (_, { getState }) => {
+    try {
+      const { limit, page } = getState().Categories;
+      const data = await AxiosCustom(
+        `/back/categories?limit=${limit}&page=${page+1}`
+      );
+      return data;
+    } catch (error) {
+      console.error(error);
     }
-    throw error;
   }
-});
+);
 
-// Create a slice using Redux Toolkit
 const Categories = createSlice({
-  name: 'Categories',
+  name: "Categories",
   initialState,
   reducers: {
     setLimit: (state, action) => {
       state.limit = action.payload;
-      state.offset = 0; // Reset the offset when changing the limit
+      state.page = 1;
     },
-    setOffset: (state, action) => {
-      state.offset = action.payload;
+    setPage: (state, action) => {
+      state.page = action.payload;
     },
-    setSearch: (state, action) => {
-      state.search = action.payload;
-    }
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchDataCategories.pending, (state) => {
+      .addCase(fetchCategories.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchDataCategories.fulfilled, (state, action) => {
+      .addCase(fetchCategories.fulfilled, (state, action) => {
         state.loading = false;
-        state.data = [...action?.payload?.data?.categories];
-        state.count = action?.payload?.data?.count;
+        state.data = [...action?.payload?.data.categories];
+        state.count = action?.payload.data.count;
       })
-      .addCase(fetchDataCategories.rejected, (state, action) => {
+      .addCase(fetchCategories.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message || 'An error occurred';
+        state.error = action.error.message || "An error occurred";
       });
-  }
+  },
 });
 
-// Export the actions and reducer
-export const { setLimit, setOffset, setSearch } = Categories.actions;
+export const { setLimit, setPage } = Categories.actions;
 export default Categories.reducer;

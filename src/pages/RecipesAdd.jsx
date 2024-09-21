@@ -2,41 +2,59 @@ import React, { useContext, useEffect, useState } from "react";
 import Breadcrumb from "../components/Breadcrumb";
 import { t } from "i18next";
 import { useDispatch, useSelector } from "react-redux";
-import { Select, MenuItem, FormControl, Chip, Box } from "@mui/material";
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+} from "@mui/material";
 import { AxiosCustom } from "../common/AxiosInstance";
 import { useNavigate } from "react-router-dom";
 import { Valid } from "../common/Valid";
 import { AppContext } from "../App";
 import axios from "axios";
 import { api, url } from "../common/Config";
-import { fetchBanners } from "../redux/features/Banners";
+import { fetchRecipes } from "../redux/features/Recipes";
 
-function BannerAdd() {
+function RecipesAdd() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
   const [file, setFile] = useState([]);
   const [data, setData] = useState({
-    title_tm: "",
-    title_ru: "",
-    title_en: "",
-    sub_title_tm: "",
-    sub_title_ru: "",
-    sub_title_en: "",
+    name_tm: "",
+    name_ru: "",
+    name_en: "",
     description_tm: "",
     description_ru: "",
     description_en: "",
-    image: {
-      url: "",
-      hash_blur: "",
-    },
+    image: "",
   });
+  const [composition, setComposition] = useState({
+    name_tm: "",
+    name_ru: "",
+    name_en: "",
+    percentage: 0,
+  });
+  const [compositions, setCompositions] = useState([]);
 
   const { lang } = useContext(AppContext);
 
   const handleInput = (e) => {
     setData({ ...data, [e.target.name]: e.target.value });
   };
-  const handleUploadImage = async (event) => {
+
+  const handleInputComposition = (e) => {
+    const { name, value } = e.target;
+
+    // Convert 'percentage' field to a number
+    setComposition({
+      ...composition,
+      [name]: name === "percentage" ? Number(value) : value,
+    });
+  };
+  const handleUploadImage = (event) => {
     const formData = new FormData();
     formData.append("image", event.target.files[0]);
     setFile({
@@ -44,38 +62,16 @@ function BannerAdd() {
       name: event.target.files[0].name,
       size: convertBytesToKBorMB(event.target.files[0].size),
     });
-    try {
-      const res = await AxiosCustom(
-        url + "back/images/blur-hash",
-        { method: "POST", data: formData },
-        true
-      );
-      setData({
-        ...data,
-        image: {
-          url: res.data.image.url,
-          hash_blur: res.data.image.hash_blur,
-        },
+    axios
+      .post(url + "back/images?image_type=recipe", formData)
+      .then((response) => {
+        console.log(response);
+        setData({ ...data, image: response.data.image });
+      })
+      .catch((error) => {
+        alert("Error uploading file:", error);
+        setFile({});
       });
-    } catch (err) {
-      console.error(err);
-    }
-    // axios
-    //   .post(url + "back/images/blur-hash", formData)
-    //   .then((response) => {
-    //     console.log(response);
-    //     setData({
-    //       ...data,
-    //       image: {
-    //         url: response.data.image.url,
-    //         hash_blur: response.data.image.hash_blur,
-    //       },
-    //     });
-    //   })
-    //   .catch((error) => {
-    //     alert("Error uploading file:", error);
-    //     setFile({});
-    //   });
   };
   function convertBytesToKBorMB(bytes) {
     const KB = 1024;
@@ -97,6 +93,7 @@ function BannerAdd() {
     }
     return true;
   }
+
   const deleteImage = async () => {
     try {
       const res = await AxiosCustom("/back/images", {
@@ -108,7 +105,7 @@ function BannerAdd() {
         console.log("Image deleted successfully");
         // Optionally, reset the image data in the state if needed
         setFile({});
-        setData({ ...data, image: {} });
+        setData({ ...data, image: "" });
       } else {
         console.error("Failed to delete image", res);
       }
@@ -117,18 +114,44 @@ function BannerAdd() {
     }
   };
 
+  const handleClose = () => {
+    setOpen(false);
+  };
+
   const sendData = async (e) => {
     e.preventDefault();
-    console.log(data);
+
+    // Create a new data object that includes the compositions
+    const newDataWithCompositions = {
+      ...data,
+      compositions: compositions.length > 0 ? compositions : null,
+    };
+
     try {
+      // First request - just sending `data` (without compositions)
       if (Valid(data)) {
-        const res = await AxiosCustom("/back/sliders", {
+        const res1 = await AxiosCustom("/back/recipes", {
           method: "POST",
-          data,
+          data: data, // Only `data` sent here
         });
-        if (res.status) {
-          await dispatch(fetchBanners());
-          navigate("/banner");
+        if (res1.status) {
+          await dispatch(fetchRecipes());
+          navigate("/recipes");
+        }
+
+        // Second request - sending `data` with `compositions`
+        if (!res1.status && compositions.length > 0) {
+          const res2 = await AxiosCustom("/back/recipes", {
+            method: "POST",
+            data: newDataWithCompositions, // `data` with compositions sent here
+          });
+
+          if (res2.status) {
+            await dispatch(fetchRecipes());
+            navigate("/recipes");
+          } else {
+            alert(t("fillTheGaps"));
+          }
         }
       } else {
         alert(t("fillTheGaps"));
@@ -138,92 +161,87 @@ function BannerAdd() {
     }
   };
 
+  const addCompositions = (e) => {
+    e.preventDefault();
+
+    // Check if the composition is valid before adding it
+    if (
+      !composition.name_tm ||
+      !composition.name_ru ||
+      !composition.name_en ||
+      composition.percentage <= 0
+    ) {
+      alert("Please fill in all the fields correctly.");
+      return;
+    }
+
+    // Add the current composition to the compositions array
+    setCompositions((prevData) => [...prevData, composition]);
+
+    // Reset the composition form
+    setComposition({
+      name_tm: "",
+      name_ru: "",
+      name_en: "",
+      percentage: 0,
+    });
+    console.log(compositions);
+    setOpen(false);
+  };
+
+  const deleteComposition = (index) => {
+    setCompositions((prevCompositions) =>
+      prevCompositions.filter((_, i) => i !== index)
+    );
+  };
+
   return (
     <div className="dress-add">
-      <Breadcrumb page={"banners"} pageLink={"banners"} name={t("bannerAdd")} />
-      <div>
+      <Breadcrumb page={"recipes"} pageLink={"recipes"} name={t("recipeAdd")} />
+      <div onSubmit={sendData}>
         <div className="dress-add_content flex justify-between mt-5">
           <div className="dress-add_content_left w-3/5 h-[70vh] overflow-auto rounded-lg border bg-white mr-5">
             <div className="name px-5 py-4 font-bold border-b">
-              {t("bannerInformation")}
+              {t("recipeInformation")}
             </div>
             <div className="inputs grid grid-cols-2 gap-5 p-5">
               <div className="dress-input">
                 <label className="label font-semibold block mb-2.5">
-                  {`${t("title")}_tm`}
+                  {`${t("nameSimple")}_tm`}
                 </label>
                 <input
                   type="text"
                   className="w-full text-lybas-gray bg-gray-100 rounded-lg outline-none px-5 py-2.5"
-                  placeholder={`${t("title")}_tm`}
-                  name="title_tm"
-                  value={data.title_tm}
+                  placeholder={`${t("nameSimple")}_tm`}
+                  name="name_tm"
+                  value={data.name_tm}
                   onChange={handleInput}
                 />
               </div>
               <div className="dress-input">
                 <label className="label font-semibold block mb-2.5">
-                  {`${t("title")}_ru`}
+                  {`${t("nameSimple")}_ru`}
                 </label>
                 <input
-                  name="title_ru"
-                  value={data.title_ru}
+                  name="name_ru"
+                  value={data.name_ru}
                   onChange={handleInput}
                   type="text"
                   className="w-full text-lybas-gray bg-gray-100 rounded-lg outline-none px-5 py-2.5"
-                  placeholder={`${t("title")}_ru`}
+                  placeholder={`${t("nameSimple")}_ru`}
                 />
               </div>
               <div className="dress-input">
                 <label className="label font-semibold block mb-2.5">
-                  {`${t("title")}_en`}
+                  {`${t("nameSimple")}_en`}
                 </label>
                 <input
-                  name="title_en"
-                  value={data.title_en}
+                  name="name_en"
+                  value={data.name_en}
                   onChange={handleInput}
                   type="text"
                   className="w-full text-lybas-gray bg-gray-100 rounded-lg outline-none px-5 py-2.5"
-                  placeholder={`${t("title")}_en`}
-                />
-              </div>
-              <div className="dress-input col-span-2">
-                <label className="label font-semibold block mb-2.5">
-                  {`${t("sub_title")}_tm`}
-                </label>
-                <textarea
-                  type="text"
-                  className="w-full text-lybas-gray bg-gray-100 rounded-lg outline-none px-5 py-2.5"
-                  placeholder={`${t("sub_title")}_tm`}
-                  name="sub_title_tm"
-                  value={data.sub_title_tm}
-                  onChange={handleInput}
-                />
-              </div>
-              <div className="dress-input col-span-2">
-                <label className="label font-semibold block mb-2.5">
-                  {`${t("sub_title")}_ru`}
-                </label>
-                <textarea
-                  name="sub_title_ru"
-                  value={data.sub_title_ru}
-                  onChange={handleInput}
-                  type="text"
-                  className="w-full text-lybas-gray bg-gray-100 rounded-lg outline-none px-5 py-2.5"
-                  placeholder={`${t("sub_title")}_ru`}
-                />
-              </div>
-              <div className="dress-input col-span-2">
-                <label className="label font-semibold block mb-2.5">
-                  {`${t("sub_title")}_en`}
-                </label>
-                <textarea
-                  name="sub_title_en"
-                  value={data.sub_title_en}
-                  onChange={handleInput}
-                  type="text"
-                  className="w-full text-lybas-gray bg-gray-100 rounded-lg outline-none px-5 py-2.5"
-                  placeholder={`${t("sub_title")}_en`}
+                  placeholder={`${t("nameSimple")}_en`}
                 />
               </div>
               <div className="dress-input col-span-2">
@@ -264,6 +282,49 @@ function BannerAdd() {
                   className="w-full text-lybas-gray bg-gray-100 rounded-lg outline-none px-5 py-2.5"
                   placeholder={`${t("description")}_en`}
                 />
+              </div>
+            </div>
+            <div className="filter-edit_body_datas grid grid-cols-3 gap-5 p-5">
+              {compositions.length > 0 &&
+                compositions.map((com, index) => (
+                  <div className="data">
+                    <div className="data_label font-bold mb-2">
+                      {t("composition")} {index + 1}
+                    </div>
+                    <div className="data_input rounded-lg bg-gray-100 flex items-center">
+                      <input
+                        type="text"
+                        className="outline-none w-full bg-gray-100 py-2.5 px-5 text-lybas-gray rounded-lg"
+                        placeholder={t("nameSimple")}
+                        value={com?.name_tm}
+                      />
+                      <button
+                        className="mr-3"
+                        onClick={() => deleteComposition(index)}
+                      >
+                        <svg
+                          width="24"
+                          height="24"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M7 21C6.45 21 5.97917 20.8042 5.5875 20.4125C5.19583 20.0208 5 19.55 5 19V6H4V4H9V3H15V4H20V6H19V19C19 19.55 18.8042 20.0208 18.4125 20.4125C18.0208 20.8042 17.55 21 17 21H7ZM9 17H11V8H9V17ZM13 17H15V8H13V17Z"
+                            fill="#FF3521"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              <div className="flex items-end">
+                <button
+                  onClick={() => setOpen(true)}
+                  className="bg-lybas-blue text-white py-2 px-4 rounded-lg"
+                >
+                  {t("add compositions")}
+                </button>
               </div>
             </div>
           </div>
@@ -344,7 +405,7 @@ function BannerAdd() {
             </div>
             <div className="actions flex mt-10">
               <button
-                onClick={() => navigate("/banner")}
+                onClick={() => navigate("/recipes")}
                 className="bg-white border mr-5 w-full py-2 rounded hover:bg-gray-100"
               >
                 {t("cancel")}
@@ -361,8 +422,87 @@ function BannerAdd() {
           </div>
         </div>
       </div>
+      <Dialog
+        open={open}
+        onClose={handleClose}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title">{t("addNewOne")}</DialogTitle>
+        <DialogContent sx={{ width: "400px" }}>
+          <>
+            <div className="input-filter flex flex-col mb-2">
+              <label className="mb-2 text-black cursor-pointer" htmlFor="tm">
+                Türkmençe
+              </label>
+              <input
+                className="w-full text-lybas-gray rounded-lg bg-gray-100 outline-none py-2 px-5"
+                type="text"
+                id="tm"
+                name="name_tm"
+                value={composition.name_tm}
+                onChange={handleInputComposition}
+                placeholder="Türkmençe"
+              />
+            </div>
+            <div className="input-filter flex flex-col mb-2">
+              <label className="mb-2 text-black cursor-pointer" htmlFor="ru">
+                Русский
+              </label>
+              <input
+                className="w-full text-lybas-gray rounded-lg bg-gray-100 outline-none py-2 px-5"
+                type="text"
+                id="ru"
+                name="name_ru"
+                value={composition.name_ru}
+                onChange={handleInputComposition}
+                placeholder="Русский"
+              />
+            </div>
+            <div className="input-filter flex flex-col">
+              <label className="mb-2 text-black cursor-pointer" htmlFor="en">
+                English
+              </label>
+              <input
+                className="w-full text-lybas-gray rounded-lg bg-gray-100 outline-none py-2 px-5"
+                type="text"
+                id="en"
+                name="name_en"
+                value={composition.name_en}
+                onChange={handleInputComposition}
+                placeholder="English"
+              />
+            </div>
+            <div className="input-filter flex flex-col mb-2">
+              <label
+                className="mb-2 text-black cursor-pointer"
+                htmlFor="percentage"
+              >
+                Percentage
+              </label>
+              <input
+                className="w-full text-lybas-gray rounded-lg bg-gray-100 outline-none py-2 px-5"
+                type="number"
+                id="percentage"
+                name="percentage"
+                value={composition.percentage}
+                onChange={handleInputComposition}
+                placeholder="Percentage"
+                min="0"
+                max="100"
+              />
+            </div>
+          </>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose}>{t("cancel")}</Button>
+          <Button onClick={addCompositions} autoFocus>
+            <span>{t("add")}</span>
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 }
 
-export default BannerAdd;
+export default RecipesAdd;

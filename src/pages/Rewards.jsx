@@ -14,67 +14,58 @@ import { AppContext } from "../App";
 import { AxiosCustom } from "../common/AxiosInstance";
 import Search from "../components/Search";
 import { api, url } from "../common/Config";
-import { fetchBanners, setLimit, setPage } from "../redux/features/Banners";
+import { fetchRewards, setLimit, setPage } from "../redux/features/Rewards";
 
 const columns = [
   {
     id: "image",
     label: "image",
     minWidth: 170,
-    align: "left",
-  },
-  {
-    id: "product",
-    label: "product",
-    minWidth: 170,
-    align: "left",
-  },
-  {
-    id: "description",
-    label: "description",
-    minWidth: 170,
-    align: "left",
+    align: "center",
   },
   {
     id: "delete",
     label: "delete",
     minWidth: 100,
-    align: "right",
+    align: "center",
   },
 ];
 
-function Banner() {
+function Rewards() {
   const { lang } = useContext(AppContext);
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const page = useSelector((state) => state?.Banners?.page);
-  const data = useSelector((state) => state?.Banners?.data);
-  const count = useSelector((state) => state?.Banners?.count);
-  const limit = useSelector((state) => state?.Banners?.limit);
+  const page = useSelector((state) => state?.Rewards?.page);
+  const data = useSelector((state) => state?.Rewards?.data);
+  const count = useSelector((state) => state?.Rewards?.count);
+  const limit = useSelector((state) => state?.Rewards?.limit);
 
   const handleChangePage = async (event, newPage) => {
     await dispatch(setPage(newPage)); // Set newPage directly
-    await dispatch(fetchBanners()); // Fetch the recipes for the new page
+    await dispatch(fetchRewards()); // Fetch the recipes for the new page
   };
 
   const handleChangeRowsPerPage = async (event) => {
     const newLimit = parseInt(event.target.value); // Convert rows per page to an integer
     await dispatch(setLimit(newLimit));
     await dispatch(setPage(0)); // Reset to first page after changing rows per page
-    await dispatch(fetchBanners()); // Fetch the recipes with new limit
+    await dispatch(fetchRewards()); // Fetch the recipes with new limit
   };
   useEffect(() => {
-    dispatch(fetchBanners());
+    dispatch(fetchRewards());
   }, []);
-  console.log(data);
 
-  const deleteBanner = async (id) => {
+  const deleteGallery = async (id, image) => {
     try {
-      const res = await AxiosCustom("/back/sliders/" + id, {
+      const res = await AxiosCustom("/back/diploms/" + id, {
         method: "DELETE",
+        data: {
+          id: id,
+          image: image,
+        },
       });
       if (res.status === 200) {
-        dispatch(fetchBanners());
+        dispatch(fetchRewards());
       }
     } catch (err) {
       console.error(err);
@@ -84,9 +75,9 @@ function Banner() {
   return (
     <div className="orders-page">
       <Search
-        title="banners"
+        title="rewards"
         className="mt-5"
-        action={{ link: "banner_add", text: "addBanner" }}
+        action={{ link: "reward_add", text: "addReward" }}
       />
       <div className="orders_table mt-5 shadow-lybas-1 rounded-lg overflow-hidden">
         <div className="relative overflow-x-auto">
@@ -108,15 +99,15 @@ function Banner() {
                 </TableHead>
                 <TableBody>
                   {data?.length > 0 &&
-                    data.map((banner, index) => (
+                    data.map((reward, index) => (
                       <TableRow key={index} hover role="checkbox" tabIndex={-1}>
-                        <TableCell align={"left"}>
+                        <TableCell align={"center"}>
                           <div className={"table-with-grid_tr_data"}>
-                            <div className="name font-semibold">
-                              {banner?.image ? (
+                            <div className="name font-semibold flex justify-center">
+                              {reward?.image ? (
                                 <img
                                   className="w-12 h-12 rounded-lg object-cover mr-3"
-                                  src={api + banner.image.url}
+                                  src={api + reward.image}
                                   alt=""
                                 />
                               ) : (
@@ -133,28 +124,12 @@ function Banner() {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell align={"left"}>
-                          <div
-                            className={"table-with-grid_tr_data text-gray-600"}
-                          >
-                            <div className="name font-semibold">
-                            {banner["title_" + lang]}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell align={"left"}>
-                          <div
-                            className={"table-with-grid_tr_data text-gray-600"}
-                          >
-                            <div className="name font-semibold">
-                            {banner["sub_title_" + lang]}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell align={"right"}>
+                        <TableCell align={"center"}>
                           <button
                             className="mr-3"
-                            onClick={() => deleteBanner(banner?.id)}
+                            onClick={() =>
+                              deleteGallery(reward?.id, reward?.image)
+                            }
                           >
                             <svg
                               width="24"
@@ -191,4 +166,4 @@ function Banner() {
   );
 }
 
-export default Banner;
+export default Rewards;

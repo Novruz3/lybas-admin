@@ -1,8 +1,8 @@
 import axios, { AxiosInstance as Axios } from 'axios';
-import { api as url } from './Config';
+import { url } from './Config';
 
-export const BASE_URL = url + 'chief/';
-const token = localStorage.getItem('token');
+export const BASE_URL = url;
+const token = sessionStorage.getItem('access-token');
 
 const AxiosInstance = axios.create({
   baseURL: BASE_URL,
@@ -20,9 +20,10 @@ const AxiosInstanceFormData = axios.create({
     Authorization: token ? `Bearer ${token}` : '',
     'Content-Type': 'multipart/form-data'
   }
-});
+}); 
+
 const AxiosCustom = async (url, options = { method: 'GET' }, file = false) => {
-  const token = localStorage.getItem('lybas-token');
+  const token = sessionStorage.getItem('access-token');
   if (file) {
     const response = await axios({
       url,

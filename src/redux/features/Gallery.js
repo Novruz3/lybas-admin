@@ -7,29 +7,26 @@ const initialState = {
   error: null,
   limit: 10,
   page: 0,
-  count : 0
+  count: 0,
 };
-export const fetchOrders = createAsyncThunk(
-  "data/fetchOrders",
+export const fetchGallery = createAsyncThunk(
+  "data/fetchGallery",
   async (_, { getState }) => {
     try {
-      const { limit, page } = getState().Orders;
-      const data = await AxiosCustom(`/back/mails?limit=${limit}&page=${page+1}`);
+      const { limit, page } = getState().Gallery;
+      const data = await AxiosCustom(
+        `/back/galleries?limit=${limit}&page=${page+1}`
+      );
+      console.log(data);
       return data;
     } catch (error) {
       console.error(error);
-      // const err = error.response.data.message;
-      // if (err === 'jwt expired') {
-      //   window.location.reload('/login');
-      //   localStorage.clear('lybas-token');
-      // }
-      // throw error;
     }
   }
 );
 
-const Orders = createSlice({
-  name: "Orders",
+const Gallery = createSlice({
+  name: "Gallery",
   initialState,
   reducers: {
     setLimit: (state, action) => {
@@ -42,21 +39,21 @@ const Orders = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchOrders.pending, (state) => {
+      .addCase(fetchGallery.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchOrders.fulfilled, (state, action) => {
+      .addCase(fetchGallery.fulfilled, (state, action) => {
         state.loading = false;
-        state.data = [...action?.payload?.data.mails];
+        state.data = [...action?.payload?.data.galleries];
         state.count = action?.payload.data.count;
       })
-      .addCase(fetchOrders.rejected, (state, action) => {
+      .addCase(fetchGallery.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message || "An error occurred";
       });
   },
 });
 
-export const { setLimit, setPage } = Orders.actions;
-export default Orders.reducer;
+export const { setLimit, setPage } = Gallery.actions;
+export default Gallery.reducer;

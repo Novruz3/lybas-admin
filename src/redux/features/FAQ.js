@@ -7,29 +7,25 @@ const initialState = {
   error: null,
   limit: 10,
   page: 0,
-  count : 0
+  count: 0,
 };
-export const fetchOrders = createAsyncThunk(
-  "data/fetchOrders",
+export const fetchFAQ = createAsyncThunk(
+  "data/fetchFAQ",
   async (_, { getState }) => {
     try {
-      const { limit, page } = getState().Orders;
-      const data = await AxiosCustom(`/back/mails?limit=${limit}&page=${page+1}`);
+      const { limit, page } = getState().FAQ;
+      const data = await AxiosCustom(
+        `/back/faqs?limit=${limit}&page=${page+1}`
+      );
       return data;
     } catch (error) {
       console.error(error);
-      // const err = error.response.data.message;
-      // if (err === 'jwt expired') {
-      //   window.location.reload('/login');
-      //   localStorage.clear('lybas-token');
-      // }
-      // throw error;
     }
   }
 );
 
-const Orders = createSlice({
-  name: "Orders",
+const FAQ = createSlice({
+  name: "FAQ",
   initialState,
   reducers: {
     setLimit: (state, action) => {
@@ -42,21 +38,21 @@ const Orders = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchOrders.pending, (state) => {
+      .addCase(fetchFAQ.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchOrders.fulfilled, (state, action) => {
+      .addCase(fetchFAQ.fulfilled, (state, action) => {
         state.loading = false;
-        state.data = [...action?.payload?.data.mails];
+        state.data = [...action?.payload?.data.faqs];
         state.count = action?.payload.data.count;
       })
-      .addCase(fetchOrders.rejected, (state, action) => {
+      .addCase(fetchFAQ.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message || "An error occurred";
       });
   },
 });
 
-export const { setLimit, setPage } = Orders.actions;
-export default Orders.reducer;
+export const { setLimit, setPage } = FAQ.actions;
+export default FAQ.reducer;

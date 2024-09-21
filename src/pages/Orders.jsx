@@ -1,120 +1,103 @@
-import { t } from 'i18next';
-import Search from '../components/Search';
-import React, { useContext, useEffect, useState } from 'react';
-import Paper from '@mui/material/Paper';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TablePagination from '@mui/material/TablePagination';
-import TableRow from '@mui/material/TableRow';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchDataOrders, setOffset, setFilter, setLimit, setSearch, setStatus } from '../redux/features/Orders';
-import { useNavigate } from 'react-router-dom';
-import { AppContext } from '../App';
-import { AxiosCustom } from '../common/AxiosInstance';
+import { t } from "i18next";
+import React, { useContext, useEffect } from "react";
+import Paper from "@mui/material/Paper";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TablePagination from "@mui/material/TablePagination";
+import TableRow from "@mui/material/TableRow";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { AppContext } from "../App";
+import { fetchOrders, setLimit, setPage } from "../redux/features/Orders";
+import { AxiosCustom } from "../common/AxiosInstance";
 
 const columns = [
   {
-    id: 'clientPhoneNumber',
-    label: 'clientPhoneNumber',
+    id: "client",
+    label: "client",
     minWidth: 170,
-    align: 'left'
+    align: "left",
   },
   {
-    id: 'product',
-    label: 'product',
+    id: "email",
+    label: "email",
     minWidth: 170,
-    align: 'left'
+    align: "left",
   },
   {
-    id: 'number',
-    label: 'number',
+    id: "product",
+    label: "product",
     minWidth: 170,
-    align: 'left'
+    align: "left",
   },
   {
-    id: 'dateTime',
-    label: 'dateTime',
+    id: "message",
+    label: "message",
+    minWidth: 170,
+    align: "left",
+  },
+  {
+    id: "delete",
+    label: "delete",
     minWidth: 100,
-    align: 'right'
+    align: "right",
   },
-  {
-    action: 'status',
-    label: 'status',
-    minWidth: 200,
-    align: 'right'
-  }
 ];
 
 function Orders() {
-  const data = useSelector((state) => state?.Orders?.data);
-  const offset = useSelector((state) => state?.Orders?.offset);
-  const limit = useSelector((state) => state?.Orders?.limit);
-  const count = useSelector((state) => state?.Orders?.count);
   const { lang } = useContext(AppContext);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const page = useSelector((state) => state?.Orders?.page);
+  const data = useSelector((state) => state?.Orders?.data);
+  const count = useSelector((state) => state?.Orders?.count);
+  const limit = useSelector((state) => state?.Orders?.limit);
 
   const handleChangePage = async (event, newPage) => {
-    await dispatch(setOffset(newPage * limit));
-    await dispatch(fetchDataOrders());
+    await dispatch(setPage(newPage)); // Set newPage directly
+    await dispatch(fetchOrders()); // Fetch the recipes for the new page
   };
 
   const handleChangeRowsPerPage = async (event) => {
-    await dispatch(setLimit(event.target.value));
-    await dispatch(fetchDataOrders());
+    const newLimit = parseInt(event.target.value); // Convert rows per page to an integer
+    await dispatch(setLimit(newLimit));
+    await dispatch(setPage(0)); // Reset to first page after changing rows per page
+    await dispatch(fetchOrders()); // Fetch the recipes with new limit
   };
-
-  const setFilterData = async (filter) => {
-    await dispatch(setFilter(filter));
-    await dispatch(fetchDataOrders());
-  };
-  const setSearchData = async (search) => {
-    await dispatch(setSearch(search));
-    await dispatch(fetchDataOrders());
-  };
-  const setStatusData = async (status) => {
-    console.log(status);
-    await dispatch(setStatus(status));
-    await dispatch(fetchDataOrders());
-  };
-
   useEffect(() => {
-    const getData = async () => {
-      try {
-        const res = await AxiosCustom('/orders/isRead');
-        console.log(res);
-        if (res.status === 200) {
-          dispatch(fetchDataOrders());
-        }
-      } catch (error) {
-        console.log(error);
-      }
-    };
-    getData();
+    dispatch(fetchOrders());
   }, []);
+  console.log(data);
+
+  const deleteOrder = async (id) => {
+    try {
+      const res = await AxiosCustom("/back/mails/" + id, { method: "DELETE" });
+      if (res.status === 200) {
+        dispatch(fetchOrders());
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <div className="orders-page">
-      <Search
-        title="orders"
-        className="mt-5"
-        setDate={setFilterData}
-        setSearch={setSearchData}
-        setWelayat={setStatusData}
-        filter={[{ text: 'waiting' }, { text: 'accepted' }, { text: 'onTheWay' }, { text: 'cancelled' }]}
-      />
-
       <div className="orders_table mt-5 shadow-lybas-1 rounded-lg overflow-hidden">
         <div className="relative overflow-x-auto">
-          <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+          <Paper sx={{ width: "100%", overflow: "hidden" }}>
             <TableContainer sx={{ maxHeight: 440 }}>
               <Table stickyHeader aria-label="sticky table">
                 <TableHead>
                   <TableRow>
                     {columns.map((column, index) => (
-                      <TableCell key={index} align={column.align} style={{ minWidth: column.minWidth }}>
+                      <TableCell
+                        key={index}
+                        align={column.align}
+                        style={{ minWidth: column.minWidth }}
+                      >
                         <span className="font-bold">{t(column.label)}</span>
                       </TableCell>
                     ))}
@@ -123,60 +106,59 @@ function Orders() {
                 <TableBody>
                   {data?.length > 0 &&
                     data.map((order, index) => (
-                      <TableRow
-                        key={index}
-                        hover
-                        role="checkbox"
-                        sx={{ cursor: 'pointer' }}
-                        onClick={() => navigate('/super/orders/' + order?.id)}
-                        tabIndex={-1}
-                      >
-                        <TableCell align={'left'}>
-                          <div className={'table-with-grid_tr_data'}>
-                            <div className="name font-semibold">{order?.user_name?.split(' ')[0]}</div>
-                            <div className="phone-number text-gray-600">{order?.user_phone}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell align={'left'}>
-                          <div className={'table-with-grid_tr_data text-gray-600'}>
+                      <TableRow key={index} hover role="checkbox" tabIndex={-1}>
+                        <TableCell align={"left"}>
+                          <div className={"table-with-grid_tr_data"}>
                             <div className="name font-semibold">
-                              {order?.order_products[0]?.product?.name_tm ? order?.order_products[0]?.product['name_' + lang] : ''}
-                            </div>
-                            <div className="phone-number text-gray-600">
-                              {order?.order_products[0]?.material?.name_tm ? order?.order_products[0]?.material['name_' + lang] : ''},
-                              {order?.order_products[0]?.size}
+                              {order?.full_name}
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell align={'left'}>#{order?.id.slice(0, 8)}</TableCell>
-                        <TableCell align={'right'}>
-                          {order?.createdAt.split('T')[0]} / {order?.createdAt.split('T')[1].split('.')[0]}
+                        <TableCell align={"left"}>
+                          <div
+                            className={"table-with-grid_tr_data text-gray-600"}
+                          >
+                            <div className="name font-semibold">
+                              {order?.email}
+                            </div>
+                          </div>
                         </TableCell>
-                        <TableCell align={'right'}>
-                          {order?.status === 'waiting' && (
-                            <div className={'bg-orange-100 w-fit float-right rounded-full flex items-center justify-between py-2 px-5'}>
-                              <div className="w-2 h-2 mr-3 rounded-full bg-orange-400"></div>
-                              {t(order?.status)}
+                        <TableCell align={"left"}>
+                          <div
+                            className={"table-with-grid_tr_data text-gray-600"}
+                          >
+                            <div className="name font-semibold">
+                              {order?.product?.name_tm}
                             </div>
-                          )}
-                          {order?.status === 'accepted' && (
-                            <div className={'bg-green-100 w-fit float-right rounded-full flex items-center justify-between py-2 px-5'}>
-                              <div className="w-2 h-2 mr-3 rounded-full bg-green-400"></div>
-                              {t(order?.status)}
+                          </div>
+                        </TableCell>
+                        <TableCell align={"left"}>
+                          <div
+                            className={"table-with-grid_tr_data text-gray-600"}
+                          >
+                            <div className="name font-semibold">
+                              {order?.letter}
                             </div>
-                          )}
-                          {order?.status === 'onTheWay' && (
-                            <div className={'bg-blue-100 w-fit float-right rounded-full flex items-center justify-between py-2 px-5'}>
-                              <div className="w-2 h-2 mr-3 rounded-full bg-blue-400"></div>
-                              {t(order?.status)}
-                            </div>
-                          )}
-                          {order?.status === 'cancelled' && (
-                            <div className={'bg-red-100 w-fit float-right rounded-full flex items-center justify-between py-2 px-5'}>
-                              <div className="w-2 h-2 mr-3 rounded-full bg-red-400"></div>
-                              {t(order?.status)}
-                            </div>
-                          )}
+                          </div>
+                        </TableCell>
+                        <TableCell align={"right"}>
+                          <button
+                            className="mr-3"
+                            onClick={() => deleteOrder(order?.id)}
+                          >
+                            <svg
+                              width="24"
+                              height="24"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M7 21C6.45 21 5.97917 20.8042 5.5875 20.4125C5.19583 20.0208 5 19.55 5 19V6H4V4H9V3H15V4H20V6H19V19C19 19.55 18.8042 20.0208 18.4125 20.4125C18.0208 20.8042 17.55 21 17 21H7ZM9 17H11V8H9V17ZM13 17H15V8H13V17Z"
+                                fill="#FF3521"
+                              />
+                            </svg>
+                          </button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -184,11 +166,11 @@ function Orders() {
               </Table>
             </TableContainer>
             <TablePagination
-              rowsPerPageOptions={[5, 10, 25, 100]}
+              rowsPerPageOptions={[10, 20, 50, 100]}
               component="div"
               count={count}
               rowsPerPage={limit}
-              page={offset / limit}
+              page={page}
               onPageChange={handleChangePage}
               onRowsPerPageChange={handleChangeRowsPerPage}
             />

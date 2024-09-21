@@ -14,7 +14,7 @@ import { AppContext } from "../App";
 import { AxiosCustom } from "../common/AxiosInstance";
 import Search from "../components/Search";
 import { api, url } from "../common/Config";
-import { fetchBanners, setLimit, setPage } from "../redux/features/Banners";
+import { fetchRecipes, setLimit, setPage } from "../redux/features/Recipes";
 
 const columns = [
   {
@@ -24,8 +24,8 @@ const columns = [
     align: "left",
   },
   {
-    id: "product",
-    label: "product",
+    id: "nameSimple",
+    label: "nameSimple",
     minWidth: 170,
     align: "left",
   },
@@ -43,38 +43,38 @@ const columns = [
   },
 ];
 
-function Banner() {
+function Recipes() {
   const { lang } = useContext(AppContext);
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const page = useSelector((state) => state?.Banners?.page);
-  const data = useSelector((state) => state?.Banners?.data);
-  const count = useSelector((state) => state?.Banners?.count);
-  const limit = useSelector((state) => state?.Banners?.limit);
+  const page = useSelector((state) => state?.Recipes?.page);
+  const data = useSelector((state) => state?.Recipes?.data);
+  const count = useSelector((state) => state?.Recipes?.count);
+  const limit = useSelector((state) => state?.Recipes?.limit);
 
   const handleChangePage = async (event, newPage) => {
     await dispatch(setPage(newPage)); // Set newPage directly
-    await dispatch(fetchBanners()); // Fetch the recipes for the new page
+    await dispatch(fetchRecipes()); // Fetch the recipes for the new page
   };
 
   const handleChangeRowsPerPage = async (event) => {
     const newLimit = parseInt(event.target.value); // Convert rows per page to an integer
     await dispatch(setLimit(newLimit));
     await dispatch(setPage(0)); // Reset to first page after changing rows per page
-    await dispatch(fetchBanners()); // Fetch the recipes with new limit
+    await dispatch(fetchRecipes()); // Fetch the recipes with new limit
   };
   useEffect(() => {
-    dispatch(fetchBanners());
+    dispatch(fetchRecipes());
   }, []);
   console.log(data);
 
-  const deleteBanner = async (id) => {
+  const deleteRecipe = async (id) => {
     try {
-      const res = await AxiosCustom("/back/sliders/" + id, {
+      const res = await AxiosCustom("/back/recipes/" + id, {
         method: "DELETE",
       });
       if (res.status === 200) {
-        dispatch(fetchBanners());
+        dispatch(fetchRecipes());
       }
     } catch (err) {
       console.error(err);
@@ -84,9 +84,9 @@ function Banner() {
   return (
     <div className="orders-page">
       <Search
-        title="banners"
+        title="recipes"
         className="mt-5"
-        action={{ link: "banner_add", text: "addBanner" }}
+        action={{ link: "recipes_add", text: "addResipe" }}
       />
       <div className="orders_table mt-5 shadow-lybas-1 rounded-lg overflow-hidden">
         <div className="relative overflow-x-auto">
@@ -108,15 +108,15 @@ function Banner() {
                 </TableHead>
                 <TableBody>
                   {data?.length > 0 &&
-                    data.map((banner, index) => (
+                    data.map((product, index) => (
                       <TableRow key={index} hover role="checkbox" tabIndex={-1}>
                         <TableCell align={"left"}>
                           <div className={"table-with-grid_tr_data"}>
                             <div className="name font-semibold">
-                              {banner?.image ? (
+                              {product.image ? (
                                 <img
                                   className="w-12 h-12 rounded-lg object-cover mr-3"
-                                  src={api + banner.image.url}
+                                  src={api + product.image}
                                   alt=""
                                 />
                               ) : (
@@ -138,7 +138,7 @@ function Banner() {
                             className={"table-with-grid_tr_data text-gray-600"}
                           >
                             <div className="name font-semibold">
-                            {banner["title_" + lang]}
+                              {product["name_" + lang]}
                             </div>
                           </div>
                         </TableCell>
@@ -147,14 +147,14 @@ function Banner() {
                             className={"table-with-grid_tr_data text-gray-600"}
                           >
                             <div className="name font-semibold">
-                            {banner["sub_title_" + lang]}
+                              {product["description_" + lang]}
                             </div>
                           </div>
                         </TableCell>
                         <TableCell align={"right"}>
                           <button
                             className="mr-3"
-                            onClick={() => deleteBanner(banner?.id)}
+                            onClick={() => deleteRecipe(product?.id)}
                           >
                             <svg
                               width="24"
@@ -191,4 +191,4 @@ function Banner() {
   );
 }
 
-export default Banner;
+export default Recipes;

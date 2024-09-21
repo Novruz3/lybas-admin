@@ -4,11 +4,13 @@ import { AxiosCustom } from "../common/AxiosInstance";
 import { Link, useNavigate } from "react-router-dom";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 
-function Login() {
+function Register() {
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState(false);
   const [data, setData] = useState({
     login: "",
     password: "",
+    confirmPassword: "",
   });
   const navigate = useNavigate();
   const handleData = (e) => {
@@ -16,17 +18,19 @@ function Login() {
   };
   const sendData = async (e) => {
     e.preventDefault();
-    console.log(data);
-    try {
-      const res = await AxiosCustom("admins/login", { method: "POST", data });
-      if (res.status) {
-        sessionStorage.setItem("access-token", res.data.access_token);
-        sessionStorage.setItem("admin", res.data.login)
-        navigate("/");
+    if (data.confirmPassword === data.password) {
+      try {
+        const res = await AxiosCustom("admins/register", {
+          method: "POST",
+          data: { login: data.login, password: data.password },
+        });
+        if (res.data.status) {
+          navigate("/login");
+        }
+      } catch (error) {
+        alert(error.response.data.message);
+        setData({ login: "", password: "", confirmPassword : "" });
       }
-    } catch (error) {
-      // alert(error.response.data.message);
-      setData({ login: "", password: "" });
     }
   };
 
@@ -35,7 +39,7 @@ function Login() {
       <div className="login w-4/5 m-auto absolute left-[50%] top-[50%] -translate-y-1/2 -translate-x-1/2 flex">
         <div className="login_form w-1/2 p-20 bg-white">
           <div className="login_form_title font-bold text-3xl mb-5">
-            {t("signIn")}
+            {t("signUp")}
           </div>
           <form onSubmit={sendData}>
             <label className="mb-2 block cursor-pointer" htmlFor="login">
@@ -72,14 +76,38 @@ function Login() {
                 />
               )}
             </div>
+            <label className="mb-2 block cursor-pointer">
+              {t("confirmPassword")}
+            </label>
+            <div className="input_password pr-3 mb-5 text-lybas-gray flex justify-between items-center border rounded-lg">
+              <input
+                type={confirmPassword ? "text" : "password"}
+                value={data.confirmPassword}
+                name="confirmPassword"
+                onChange={handleData}
+                required
+                className="outline-none py-2 px-4 w-full mr-3 text-lybas-gray"
+              />
+              {confirmPassword ? (
+                <Visibility
+                  onClick={() => setConfirmPassword(!confirmPassword)}
+                  className="cursor-pointer"
+                />
+              ) : (
+                <VisibilityOff
+                  onClick={() => setConfirmPassword(!confirmPassword)}
+                  className="cursor-pointer"
+                />
+              )}
+            </div>
             <input
               type="submit"
-              value={t("signIn")}
+              value={t("signUp")}
               className="bg-lybas-blue text-white w-full rounded-lg py-2 mb-5 text-center"
             />
           </form>
-          <Link to="/register" className="cursor-pointer">
-            Dont have an acoount?
+          <Link to="/login" className="cursor-pointer">
+            Already have an account?
           </Link>
         </div>
         <div className="welcome w-1/2 text-white font-bold text-3xl p-10 flex items-end">
@@ -90,4 +118,4 @@ function Login() {
   );
 }
 
-export default Login;
+export default Register;

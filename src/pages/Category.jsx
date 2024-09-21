@@ -1,5 +1,6 @@
+import React, { useEffect, useState } from "react";
+import Search from "../components/Search";
 import { t } from "i18next";
-import React, { useContext, useEffect } from "react";
 import Paper from "@mui/material/Paper";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -10,71 +11,55 @@ import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { AppContext } from "../App";
+import { fetchCategories, setLimit, setPage } from "../redux/features/Categories";
 import { AxiosCustom } from "../common/AxiosInstance";
-import Search from "../components/Search";
-import { api, url } from "../common/Config";
-import { fetchBanners, setLimit, setPage } from "../redux/features/Banners";
-
 const columns = [
   {
-    id: "image",
-    label: "image",
+    id: "nameSimple",
+    label: "nameSimple",
     minWidth: 170,
-    align: "left",
-  },
-  {
-    id: "product",
-    label: "product",
-    minWidth: 170,
-    align: "left",
-  },
-  {
-    id: "description",
-    label: "description",
-    minWidth: 170,
-    align: "left",
+    align: "center",
   },
   {
     id: "delete",
     label: "delete",
     minWidth: 100,
-    align: "right",
+    align: "center",
   },
 ];
 
-function Banner() {
-  const { lang } = useContext(AppContext);
+function Category() {
+  const data = useSelector((state) => state?.Categories?.data);
+  const page = useSelector((state) => state?.Categories?.page);
+  const limit = useSelector((state) => state?.Categories?.limit);
+  const count = useSelector((state) => state?.Categories?.count);
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const page = useSelector((state) => state?.Banners?.page);
-  const data = useSelector((state) => state?.Banners?.data);
-  const count = useSelector((state) => state?.Banners?.count);
-  const limit = useSelector((state) => state?.Banners?.limit);
+  const lang = localStorage.getItem("lang");
 
   const handleChangePage = async (event, newPage) => {
     await dispatch(setPage(newPage)); // Set newPage directly
-    await dispatch(fetchBanners()); // Fetch the recipes for the new page
+    await dispatch(fetchCategories()); // Fetch the recipes for the new page
   };
 
   const handleChangeRowsPerPage = async (event) => {
     const newLimit = parseInt(event.target.value); // Convert rows per page to an integer
     await dispatch(setLimit(newLimit));
     await dispatch(setPage(0)); // Reset to first page after changing rows per page
-    await dispatch(fetchBanners()); // Fetch the recipes with new limit
+    await dispatch(fetchCategories()); // Fetch the recipes with new limit
   };
-  useEffect(() => {
-    dispatch(fetchBanners());
-  }, []);
-  console.log(data);
 
-  const deleteBanner = async (id) => {
+  useEffect(() => {
+    if (!data.length) dispatch(fetchCategories());
+  }, []);
+
+  const deleteCat = async (id) => {
     try {
-      const res = await AxiosCustom("/back/sliders/" + id, {
+      const res = await AxiosCustom("/back/categories/" + id, {
         method: "DELETE",
       });
       if (res.status === 200) {
-        dispatch(fetchBanners());
+        dispatch(fetchCategories());
       }
     } catch (err) {
       console.error(err);
@@ -82,13 +67,13 @@ function Banner() {
   };
 
   return (
-    <div className="orders-page">
+    <div className="categories">
       <Search
-        title="banners"
+        title="category"
         className="mt-5"
-        action={{ link: "banner_add", text: "addBanner" }}
+        action={{ link: "categories_add", text: "addCategory" }}
       />
-      <div className="orders_table mt-5 shadow-lybas-1 rounded-lg overflow-hidden">
+      <div className="notification_table mt-5 shadow-lybas-1 rounded-lg overflow-hidden">
         <div className="relative overflow-x-auto">
           <Paper sx={{ width: "100%", overflow: "hidden" }}>
             <TableContainer sx={{ maxHeight: 440 }}>
@@ -108,53 +93,19 @@ function Banner() {
                 </TableHead>
                 <TableBody>
                   {data?.length > 0 &&
-                    data.map((banner, index) => (
+                    data.map((cat, index) => (
                       <TableRow key={index} hover role="checkbox" tabIndex={-1}>
-                        <TableCell align={"left"}>
-                          <div className={"table-with-grid_tr_data"}>
-                            <div className="name font-semibold">
-                              {banner?.image ? (
-                                <img
-                                  className="w-12 h-12 rounded-lg object-cover mr-3"
-                                  src={api + banner.image.url}
-                                  alt=""
-                                />
-                              ) : (
-                                <svg
-                                  className="w-12 h-12 mr-3"
-                                  focusable="false"
-                                  aria-hidden="true"
-                                  viewBox="0 0 24 24"
-                                  data-testid="Person2Icon"
-                                >
-                                  <path d="M18.39 14.56C16.71 13.7 14.53 13 12 13s-4.71.7-6.39 1.56C4.61 15.07 4 16.1 4 17.22V20h16v-2.78c0-1.12-.61-2.15-1.61-2.66zM9.78 12h4.44c1.21 0 2.14-1.06 1.98-2.26l-.32-2.45C15.57 5.39 13.92 4 12 4S8.43 5.39 8.12 7.29L7.8 9.74c-.16 1.2.77 2.26 1.98 2.26z"></path>
-                                </svg>
-                              )}
-                            </div>
+                        <TableCell
+                          align={"center"}
+                        >
+                          <div className="name font-semibold">
+                            {cat["name_" + lang]}
                           </div>
                         </TableCell>
-                        <TableCell align={"left"}>
-                          <div
-                            className={"table-with-grid_tr_data text-gray-600"}
-                          >
-                            <div className="name font-semibold">
-                            {banner["title_" + lang]}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell align={"left"}>
-                          <div
-                            className={"table-with-grid_tr_data text-gray-600"}
-                          >
-                            <div className="name font-semibold">
-                            {banner["sub_title_" + lang]}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell align={"right"}>
+                        <TableCell align={"center"}>
                           <button
                             className="mr-3"
-                            onClick={() => deleteBanner(banner?.id)}
+                            onClick={() => deleteCat(cat?.id)}
                           >
                             <svg
                               width="24"
@@ -191,4 +142,4 @@ function Banner() {
   );
 }
 
-export default Banner;
+export default Category;
