@@ -21,8 +21,8 @@ const columns = [
     align: "center",
   },
   {
-    id: "desc",
-    label: "desc",
+    id: "description",
+    label: "description",
     minWidth: 170,
     align: "center",
   },
